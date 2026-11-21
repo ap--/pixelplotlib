@@ -20,8 +20,8 @@ It depends only on [NumPy](https://numpy.org) and [Pillow](https://python-pillow
   `c64`, `cga` and `1bit`, each with its own resolution, palette, fonts and decorations.
 - **Pixel-art rendering**: bitmap fonts, Bayer dithering for gradients and transparency,
   palette-snapped colormaps, sprite markers (hearts, stars, skulls, UFOs, ...).
-- **Output**: PNG (or any Pillow format) at integer scale, optional CRT scanlines, and
-  animated GIFs.
+- **Output**: PNG (or any Pillow format) at integer scale, optional CRT scanlines, animated
+  GIFs, and sixel graphics for plotting straight into the terminal.
 
 ## Installation
 
@@ -65,6 +65,22 @@ plt.show()                          # inline in Jupyter, else the system image v
 
 Figures can also be returned as data: `fig.to_array()` gives the native-resolution RGB
 array and `fig.to_image(scale=...)` a `PIL.Image`.
+
+### Plotting in the terminal
+
+In a terminal with [sixel](https://en.wikipedia.org/wiki/Sixel) graphics (xterm `-ti vt340`,
+foot, WezTerm, mlterm, Konsole, iTerm2, Windows Terminal, tmux 3.4+, ...) figures are drawn
+right in the terminal:
+
+```python
+fig.show(backend="sixel")           # always write sixel to stdout
+fig.show()                          # auto: Jupyter, else sixel if supported, else viewer
+print(fig.to_sixel(scale=2))        # or grab the escape sequence yourself
+```
+
+`show()` detects sixel support by querying the terminal. Set `PIXELPLOTLIB_SIXEL=1` to force
+sixel output (e.g. on Windows or through ssh/multiplexers that hide the reply) or
+`PIXELPLOTLIB_SIXEL=0` to disable it.
 
 ## Styles
 

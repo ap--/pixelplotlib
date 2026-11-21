@@ -58,7 +58,7 @@ def savefig(path, **kwargs) -> None:
 
 
 def show(**kwargs) -> None:
-    """Show and close all open figures."""
+    """Show and close all open figures (``backend="sixel"`` draws them in the terminal)."""
     for fig in list(_figures):
         fig.show(**kwargs)
     _figures.clear()

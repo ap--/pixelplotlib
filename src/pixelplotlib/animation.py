@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterable
-from typing import Callable, Union
+from collections.abc import Callable, Iterable
 
 import numpy as np
 
 from .figure import Figure, apply_scanlines
 
-FrameLike = Union[Figure, np.ndarray]
+FrameLike = Figure | np.ndarray
 
 
 def _frame_array(frame: FrameLike, scale: int) -> np.ndarray:

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Union
 
 import numpy as np
 
 RGB = tuple[int, int, int]
-ColorLike = Union[str, Sequence[float], Sequence[int], RGB]
+ColorLike = str | Sequence[float] | Sequence[int] | RGB
 
 NAMED_COLORS: dict[str, RGB] = {
     "black": (0, 0, 0),
@@ -74,7 +73,8 @@ def luminance(rgb: Sequence[float]) -> float:
 
 def mix(a: Sequence[int], b: Sequence[int], t: float) -> RGB:
     """Linearly interpolate between colors ``a`` and ``b``."""
-    return tuple(int(round(x + (y - x) * t)) for x, y in zip(a[:3], b[:3]))  # type: ignore
+    return tuple(int(round(float(x) + (float(y) - float(x)) * t))  # type: ignore
+                 for x, y in zip(a[:3], b[:3]))
 
 
 def shade(rgb: Sequence[int], amount: float) -> RGB:

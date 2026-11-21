@@ -1,0 +1,69 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.4.0
+      # uv_build has no dynamic (VCS) versions, so stamp the release tag into pyproject.toml.
+      - name: Set version from release tag
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION=$(uv version --frozen --short "${TAG#v}")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      # PyPI can't resolve relative links, so pin them to the release tag on GitHub.
+      - name: Make README links absolute
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          sed -i -E \
+            -e "s#(\]\(|src=\")docs/#\1https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${TAG}/docs/#g" \
+            -e "s#(\]\(|src=\")examples/#\1https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/examples/#g" \
+            README.md
+      - run: uv build --no-sources
+      - name: Check distributions
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          uvx twine check --strict dist/*
+          test -f "dist/pixelplotlib-${VERSION}-py3-none-any.whl"
+          test -f "dist/pixelplotlib-${VERSION}.tar.gz"
+          uv run --isolated --no-project --with dist/*.whl -- python -c \
+            'import sys, pixelplotlib; assert pixelplotlib.__version__ == sys.argv[1], pixelplotlib.__version__' \
+            "$VERSION"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/pixelplotlib/${{ needs.build.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

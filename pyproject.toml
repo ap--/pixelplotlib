@@ -1,8 +1,17 @@
 [project]
 name = "pixelplotlib"
+# Placeholder for development; the publish workflow stamps the release tag here.
 version = "0.1.0"
 description = "Scientific plotting with 8-bit and 16-bit pixel-art graphics"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Andreas Poehlmann", email = "andreas@poehlmann.io" },
+]
+maintainers = [
+    { name = "Andreas Poehlmann", email = "andreas@poehlmann.io" },
+]
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.22",
@@ -10,10 +19,25 @@ dependencies = [
 ]
 keywords = ["plotting", "visualization", "pixel-art", "8-bit", "16-bit", "retro"]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Multimedia :: Graphics",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ap--/pixelplotlib"
+Source = "https://github.com/ap--/pixelplotlib"
+Issues = "https://github.com/ap--/pixelplotlib/issues"
+Changelog = "https://github.com/ap--/pixelplotlib/releases"
 
 [project.optional-dependencies]
 rich = [

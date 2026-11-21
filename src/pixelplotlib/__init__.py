@@ -15,7 +15,7 @@ Quick start::
 
 from importlib.metadata import PackageNotFoundError, version
 
-from . import colormaps, colors, palettes, styles
+from . import colormaps, colors, palettes, sixel, styles
 from .animation import animate, save_gif
 from .axes import Axes
 from .canvas import Canvas
@@ -36,6 +36,6 @@ except PackageNotFoundError:  # running from a source checkout without installat
 __all__ = [
     "Axes", "BitmapFont", "Canvas", "Colormap", "Figure", "Style", "FONT_3X5", "FONT_5X7",
     "MARKERS", "animate", "available", "colormaps", "colors", "context", "get_cmap",
-    "get_style", "palettes", "pixelate", "register", "register_cmap", "save_gif", "styles",
-    "use", *_pyplot_all,
+    "get_style", "palettes", "pixelate", "register", "register_cmap", "save_gif", "sixel",
+    "styles", "use", *_pyplot_all,
 ]

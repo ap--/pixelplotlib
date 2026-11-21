@@ -167,26 +167,61 @@ class Figure:
         self.to_image().save(buf, format="PNG")
         return buf.getvalue()
 
-    def show(self, scale: int | None = None) -> None:
-        """Display inline in Jupyter, otherwise open the system image viewer."""
-        try:
-            from IPython import get_ipython
-            from IPython.display import Image as IPImage
-            from IPython.display import display
+    def to_sixel(self, scale: int | None = None, scanlines: bool = False) -> str:
+        """Return the figure as a sixel escape sequence; ``print()`` it in a sixel terminal."""
+        from .sixel import encode
 
-            ip = get_ipython()
-            if ip is not None and getattr(ip, "kernel", None) is not None:
-                buf = io.BytesIO()
-                self.to_image(scale).save(buf, format="PNG")
-                display(IPImage(data=buf.getvalue()))
-                return
-        except ImportError:
-            pass
-        self.to_image(scale).show()
+        return encode(self.to_image(scale, scanlines))
+
+    def show(self, scale: int | None = None, backend: str = "auto",
+             scanlines: bool = False) -> None:
+        """Display the figure.
+
+        ``backend`` is ``"inline"`` (Jupyter), ``"sixel"`` (graphics in the terminal),
+        ``"viewer"`` (the system image viewer) or ``"auto"``, which picks the first of those
+        that is available. Sixel output is used when stdout is a terminal that reports sixel
+        support; set ``PIXELPLOTLIB_SIXEL=1`` (or ``0``) to force it on (or off).
+        """
+        if backend not in ("auto", "inline", "sixel", "viewer"):
+            raise ValueError(f"unknown backend {backend!r}")
+        img = self.to_image(scale, scanlines)
+        if backend in ("auto", "inline") and _show_inline(img):
+            return
+        if backend == "inline":
+            raise RuntimeError("inline display requires a running IPython kernel")
+        if backend == "sixel" or backend == "auto" and _sixel_available():
+            from .sixel import write
+
+            write(img)
+            return
+        img.show()
 
     def __repr__(self) -> str:
         return (f"<Figure {self.width}x{self.height} style={self.style.name!r} "
                 f"axes={len(self.axes)}>")
+
+
+def _show_inline(img) -> bool:
+    """Display ``img`` in a running IPython kernel; return ``False`` if there is none."""
+    try:
+        from IPython import get_ipython
+        from IPython.display import Image as IPImage
+        from IPython.display import display
+    except ImportError:
+        return False
+    ip = get_ipython()
+    if ip is None or getattr(ip, "kernel", None) is None:
+        return False
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    display(IPImage(data=buf.getvalue()))
+    return True
+
+
+def _sixel_available() -> bool:
+    from .sixel import terminal_supports_sixel
+
+    return terminal_supports_sixel()
 
 
 def apply_scanlines(arr: np.ndarray, scale: int, strength: float = 0.35) -> np.ndarray:

@@ -36,7 +36,7 @@ uv add pixelplotlib
 
 or install it into the current environment with `uv pip install pixelplotlib` (or `pip install pixelplotlib`).
 To try the latest development version use `uv add git+https://github.com/ap--/pixelplotlib`.
-Python 3.10 or newer is required.
+Python 3.11 or newer is required.
 
 ## Quick start
 

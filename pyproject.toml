@@ -15,10 +15,20 @@ classifiers = [
     "Topic :: Multimedia :: Graphics",
 ]
 
+[project.optional-dependencies]
+rich = [
+    "rich>=12",
+]
+textual = [
+    "textual>=0.86",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=7",
+    "rich>=15.0.0",
     "ruff>=0.5",
+    "textual>=8.2.8",
 ]
 
 [build-system]

@@ -21,7 +21,9 @@ It depends only on [NumPy](https://numpy.org) and [Pillow](https://python-pillow
 - **Pixel-art rendering**: bitmap fonts, Bayer dithering for gradients and transparency,
   palette-snapped colormaps, sprite markers (hearts, stars, skulls, UFOs, ...).
 - **Output**: PNG (or any Pillow format) at integer scale, optional CRT scanlines, animated
-  GIFs, and sixel graphics for plotting straight into the terminal.
+  GIFs, sixel graphics for plotting straight into the terminal, and
+  [Rich](https://github.com/Textualize/rich) / [Textual](https://github.com/Textualize/textual)
+  integration for terminal apps.
 
 ## Installation
 
@@ -81,6 +83,47 @@ print(fig.to_sixel(scale=2))        # or grab the escape sequence yourself
 `show()` detects sixel support by querying the terminal. Set `PIXELPLOTLIB_SIXEL=1` to force
 sixel output (e.g. on Windows or through ssh/multiplexers that hide the reply) or
 `PIXELPLOTLIB_SIXEL=0` to disable it.
+
+### Rich and Textual
+
+Figures also work in [Rich](https://github.com/Textualize/rich) and
+[Textual](https://github.com/Textualize/textual), so they render in any terminal with
+colour support (no sixel support needed). Each character cell shows two pixels as a
+half block. Install the extras with `uv add "pixelplotlib[rich,textual] @ git+https://github.com/ap--/pixelplotlib"`.
+
+A `Figure` is a Rich renderable. Wrap it in `pixelplotlib.rich.Plot` to choose its size
+in cells (`width=`, `height=`, or `expand=True` to fill the space):
+
+```python
+from rich import print
+from rich.panel import Panel
+from pixelplotlib.rich import Plot
+
+print(fig)                          # native size, shrunk to fit the terminal width
+print(Panel(Plot(fig, width=60), title="pixels"))
+```
+
+`pixelplotlib.textual.PixelPlot` is a Textual widget that fills its space (`1fr` by
+default). Use `width: auto; height: auto` to show the figure at its native size instead:
+
+```python
+from textual.app import App
+from pixelplotlib.textual import PixelPlot
+
+class PlotApp(App):
+    def compose(self):
+        fig, ax = ppl.subplots(style="pico8")
+        ax.plot([1, 3, 2, 4])
+        yield PixelPlot(fig)
+
+PlotApp().run()
+```
+
+Assign a new figure to `widget.figure` to replace the plot, or call `widget.refresh()`
+after changing the current figure. Both integrations re-render the figure at the size
+they draw it, so text and one-pixel lines stay sharp. `fig.to_array(size=(w, h))` gives
+the same re-rendered pixels as an array. [`examples/textual_app.py`](examples/textual_app.py)
+is a live dashboard: run it with `uv run --extra textual python examples/textual_app.py`.
 
 ## Styles
 

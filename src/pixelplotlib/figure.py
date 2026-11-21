@@ -118,8 +118,21 @@ class Figure:
         return int(round(x0)), int(round(y0)), int(round(x1)), int(round(y1))
 
     # ------------------------------------------------------------------ rendering
-    def render(self) -> Canvas:
-        """Rasterize the figure at its logical resolution."""
+    def render(self, size: tuple[int, int] | None = None) -> Canvas:
+        """Rasterize the figure at its logical resolution.
+
+        ``size`` lays the figure out at a different ``(width, height)`` for this call only,
+        which is how terminal front-ends fit a figure to the space they have.
+        """
+        if size is not None and tuple(size) != self.size:
+            saved, self.size = self.size, (max(int(size[0]), 1), max(int(size[1]), 1))
+            try:
+                return self._render()
+            finally:
+                self.size = saved
+        return self._render()
+
+    def _render(self) -> Canvas:
         st = self.style
         canvas = Canvas(self.width, self.height)
         fill_area(canvas, st, (0, 0, self.width, self.height), st.background)
@@ -137,9 +150,13 @@ class Figure:
             ax.render(canvas, self._cell(ax, area))
         return canvas
 
-    def to_array(self, scale: int | None = None) -> np.ndarray:
-        """Return the rendered figure as an ``(H, W, 3)`` uint8 array."""
-        return self.render().to_array(scale or 1)
+    def to_array(self, scale: int | None = None,
+                 size: tuple[int, int] | None = None) -> np.ndarray:
+        """Return the rendered figure as an ``(H, W, 3)`` uint8 array.
+
+        ``size`` renders at a different logical ``(width, height)`` (see :meth:`render`).
+        """
+        return self.render(size).to_array(scale or 1)
 
     def to_image(self, scale: int | None = None, scanlines: bool = False):
         """Return a :class:`PIL.Image.Image` upscaled with nearest-neighbour."""
@@ -195,6 +212,16 @@ class Figure:
             write(img)
             return
         img.show()
+
+    def __rich_console__(self, console, options):
+        from .rich import Plot
+
+        yield Plot(self)
+
+    def __rich_measure__(self, console, options):
+        from .rich import Plot
+
+        return Plot(self).__rich_measure__(console, options)
 
     def __repr__(self) -> str:
         return (f"<Figure {self.width}x{self.height} style={self.style.name!r} "

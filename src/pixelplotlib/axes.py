@@ -17,6 +17,14 @@ from .ticks import format_ticks, log_ticks, nice_ticks
 if TYPE_CHECKING:  # pragma: no cover
     from .figure import Figure
 
+_TICK_GAP = 2  # pixels between a y tick mark and its label
+
+
+def _overlaps(a, b) -> bool:
+    """Whether two ``(x0, y0, x1, y1)`` boxes (exclusive ends) intersect."""
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+
 _LOCS = {
     "upper right": (1, 0), "upper left": (0, 0), "lower left": (0, 1), "lower right": (1, 1),
     "upper center": (0.5, 0), "lower center": (0.5, 1), "center left": (0, 0.5),
@@ -490,6 +498,10 @@ class Axes:
             bottom, top, h + 1)
         if aspect is not None:
             self.set_aspect(aspect)
+        if left > right:
+            self._invert[0] = True
+        if bottom > top:
+            self._invert[1] = True
         return self._add_image(arr, x_edges, y_edges, cmap, vmin, vmax, norm, dither)
 
     def pcolormesh(self, *args, cmap=None, vmin=None, vmax=None, norm=None, dither=None):
@@ -596,7 +608,7 @@ class Axes:
 
     def pie(self, values, labels=None, colors=None, autopct=None, startangle=90.0,
             counterclock=True, depth=None, outline="auto"):
-        """Pie chart. ``depth`` (pixels) adds a retro 3-D extrusion."""
+        """Pie chart. ``depth`` (pixels or ``"auto"``) tilts the pie and adds a 3-D extrusion."""
         st = self.style
         n = len(values)
         if colors is None:
@@ -604,7 +616,7 @@ class Axes:
         else:
             cols = [st.color(c) for c in colors]
         if depth is None:
-            depth = 4 if st.bar_shading else 0
+            depth = "auto" if st.bar_shading else 0
         if outline == "auto":
             outline = st.bar_outline if st.bar_outline not in (None, "auto") else (
                 "#000000" if st.bar_shading else None)
@@ -710,7 +722,7 @@ class Axes:
             labels = [st.text(lb) for lb, k in zip(labels, keep) if k]
             vals = vals[keep]
             return self._thin(axis, vals, labels, length, font)
-        spacing = 28 if axis == "x" else font.line_height * 2 + 4
+        spacing = 5 * font.measure("0")[0] + 3 if axis == "x" else font.line_height * 2 + 4
         max_ticks = max(2, length // spacing + 1)
         while True:
             if scale.log:
@@ -784,7 +796,7 @@ class Axes:
                 xth = max((tfont.measure(s)[1] for s in xtl if s), default=0)
                 last_w = tfont.measure(xtl[-1])[0] if xtl else 0
                 cbar_w = self._colorbar_width(tfont, font, ph) if self._colorbar else 0
-                left = content[0] + ylabel_w + (ytw + 1 if ytw else 0) + tl + 1
+                left = content[0] + ylabel_w + (ytw + _TICK_GAP if ytw else 0) + tl + 1
                 top = content[1] + max(title_h, cap // 2 + 1 if ytl else 0) + 1
                 right = content[2] - max(last_w // 2 + 1, 1) - cbar_w
                 if cbar_w:
@@ -822,18 +834,26 @@ class Axes:
             fc = st.color(st.frame_color, st.foreground)
             canvas.rect(px0 - 1, py0 - 1, px1 + 1, py1 + 1, fc)
             tl = st.tick_length
+            boxes = []
             for v, s in zip(xt, xtl):
                 x = int(round(float(ctx.tx(v))))
                 canvas.fill_rect(x, py1 + 1, x + 1, py1 + 1 + tl, fc)
                 if s:
                     w = tfont.measure(s)[0]
                     lx = min(max(x - w // 2, content[0]), content[2] - w)
-                    canvas.text(lx, py1 + 2 + tl, s, tfont, fg, "left", "top", shadow=shadow)
+                    boxes.append(canvas.text(lx, py1 + 2 + tl, s, tfont, fg, "left", "top",
+                                             shadow=shadow))
+            cap = tfont.ascent
             for v, s in zip(yt, ytl):
                 y = int(round(float(ctx.ty(v))))
                 canvas.fill_rect(px0 - 1 - tl, y, px0 - 1, y + 1, fc)
-                if s:
-                    canvas.text(px0 - 2 - tl, y, s, tfont, fg, "right", "center", shadow=shadow)
+                if not s:
+                    continue
+                right = px0 - 1 - tl - _TICK_GAP  # exclusive right edge of the label
+                box = (right - tfont.measure(s)[0], y - cap // 2, right, y - cap // 2 + cap)
+                if any(_overlaps(box, b) for b in boxes):
+                    continue  # e.g. the lowest y label colliding with the first x label
+                canvas.text(right - 1, y, s, tfont, fg, "right", "center", shadow=shadow)
             if self._xlabel:
                 canvas.text((px0 + px1) // 2, content[3] - font.measure(st.text(self._xlabel))[1],
                             st.text(self._xlabel), font, fg, "center", "top", shadow=shadow)
@@ -879,7 +899,8 @@ class Axes:
         _, labels = cb.tick_values(max(2, height // (tfont.line_height * 2 + 4) + 1))
         lw = max((tfont.measure(s)[0] for s in labels), default=0)
         label_w = font.measure(st.text(cb.label))[1] + st.pad if cb.label else 0
-        return self._CBAR_GAP + self._CBAR_W + 2 + st.tick_length + 1 + lw + label_w + 1
+        return (self._CBAR_GAP + self._CBAR_W + 2 + st.tick_length + _TICK_GAP + lw + label_w
+                + 1)
 
     def _draw_colorbar(self, canvas, plot, tfont, font, shadow):
         st = self.style
@@ -911,11 +932,12 @@ class Axes:
                 u = float(m.norm(np.array([v]))[0])
             y = int(round(py0 + (1 - u) * (h - 1)))
             canvas.fill_rect(bx1 + 1, y, bx1 + 1 + tl, y + 1, fc)
-            canvas.text(bx1 + 2 + tl, y, st.text(s), tfont, st.fg, "left", "center",
+            canvas.text(bx1 + 1 + tl + _TICK_GAP, y, st.text(s), tfont, st.fg, "left", "center",
                         shadow=shadow)
             lw = max(lw, tfont.measure(st.text(s))[0])
         if cb.label:
-            canvas.text(bx1 + 2 + tl + lw + st.pad, (py0 + py1) // 2, st.text(cb.label), font,
+            canvas.text(bx1 + 1 + tl + _TICK_GAP + lw + st.pad, (py0 + py1) // 2,
+                        st.text(cb.label), font,
                         st.fg, "left", "center", rotation=90, shadow=shadow)
 
     # ------------------------------------------------------------------ legend

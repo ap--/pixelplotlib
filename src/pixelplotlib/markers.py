@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Union
 
 import numpy as np
 
@@ -12,9 +11,9 @@ _SPRITES: dict[str, list[str]] = {
     ".": [".#.", "###", ".#."],
     "o": [".###.", "#####", "#####", "#####", ".###."],
     "s": ["#####", "#####", "#####", "#####", "#####"],
-    "^": ["..#..", "..#..", ".###.", ".###.", "#####"],
-    "v": ["#####", ".###.", ".###.", "..#..", "..#.."],
-    "D": ["..#..", ".###.", "#####", ".###.", "..#.."],
+    "^": ["...#...", "..###..", ".#####.", "#######"],
+    "v": ["#######", ".#####.", "..###..", "...#..."],
+    "D": ["...#...", "..###..", ".#####.", "#######", ".#####.", "..###..", "...#..."],
     "+": ["..#..", "..#..", "#####", "..#..", "..#.."],
     "x": ["#...#", ".#.#.", "..#..", ".#.#.", "#...#"],
     "*": ["..#..", "#.#.#", ".###.", "#.#.#", "..#.."],
@@ -27,7 +26,7 @@ _SPRITES: dict[str, list[str]] = {
 _ALIASES = {"circle": "o", "square": "s", "diamond": "D", "triangle": "^", "pixel": "p",
             "point": ".", "plus": "+", "cross": "x"}
 
-MarkerLike = Union[str, Sequence[str], np.ndarray]
+MarkerLike = str | Sequence[str] | np.ndarray
 
 MARKERS = tuple(_SPRITES) + tuple(_ALIASES)
 

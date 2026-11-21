@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Union
 
 import numpy as np
 
@@ -73,7 +72,7 @@ COLORMAPS: dict[str, Colormap] = {
 }
 COLORMAPS["grey"] = COLORMAPS["gray"]
 
-CmapLike = Union[str, Colormap, Sequence[ColorLike]]
+CmapLike = str | Colormap | Sequence[ColorLike]
 
 
 def get_cmap(cmap: CmapLike) -> Colormap:

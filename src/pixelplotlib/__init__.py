@@ -13,6 +13,8 @@ Quick start::
     fig.save("waves.png")
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from . import colormaps, colors, palettes, styles
 from .animation import animate, save_gif
 from .axes import Axes
@@ -26,7 +28,10 @@ from .pyplot import *  # noqa: F401,F403
 from .pyplot import __all__ as _pyplot_all
 from .styles import Style, available, context, get_style, register, use
 
-__version__ = "0.1.0"
+try:
+    __version__ = version("pixelplotlib")
+except PackageNotFoundError:  # running from a source checkout without installation
+    __version__ = "0.0.0"
 
 __all__ = [
     "Axes", "BitmapFont", "Canvas", "Colormap", "Figure", "Style", "FONT_3X5", "FONT_5X7",

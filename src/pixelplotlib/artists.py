@@ -237,6 +237,10 @@ class Line(Artist):
         px, py = ctx.tx(self.x), ctx.ty(self.y)
         st = ctx.style
         if self.linestyle not in ("none", "", None):
+            if self.shadow and st.line_halo is not None:
+                # background-colored outline keeps lines readable on dithered fills
+                ctx.canvas.polyline(px, py, st.color(st.line_halo), self.width + 2,
+                                    self.linestyle)
             if self.shadow and st.line_shadow is not None:
                 ctx.canvas.polyline(px + 1, py + 1, st.color(st.line_shadow), self.width,
                                     self.linestyle)
@@ -968,32 +972,50 @@ class Pie(Artist):
         if self.labels:
             label_w = max(font.measure(st.text(s))[0] for s in self.labels) + 3
         label_h = font.line_height + 2 if self.labels else 0
-        r = max(min((x1 - x0) / 2 - label_w, (y1 - y0 - self.depth) / 2 - label_h) - 1, 3)
+        depth = self.depth
+        if depth == "auto":
+            depth = max(3, int(round((y1 - y0) * 0.05)))
+        depth = int(depth or 0)
+        tilt = 0.6 if depth > 0 else 1.0  # 3-D pies are viewed at an angle
+        r = max(min((x1 - x0) / 2 - label_w,
+                    ((y1 - y0 - depth) / 2 - label_h) / tilt) - 1, 3)
         cx = (x0 + x1 - 1) / 2
-        cy = (y0 + y1 - 1 - self.depth) / 2
+        cy = (y0 + y1 - 1 - depth) / 2
         n = int(math.ceil(r))
         yy, xx = np.mgrid[-n : n + 1, -n : n + 1]
-        disc = xx * xx + yy * yy <= r * r + r * 0.8
-        idx = self.wedge_index(xx, yy)
+        disc = xx * xx + (yy / tilt) ** 2 <= r * r + r * 0.8
+        idx = self.wedge_index(xx, yy / tilt)
         cols = np.array([self.colors[i % len(self.colors)] for i in range(len(self.fracs))],
                         dtype=np.uint8)
         ix, iy = int(round(cx)) - n, int(round(cy)) - n
         edge = st.color(self.outline) if self.outline is not None else None
-        # 3-D extrusion: darker copies of the lower rim
-        if self.depth > 0:
+        # 3-D extrusion: a darker side wall below the front half of the pie
+        if depth > 0:
             dark = np.array([st.shade(c, -0.45) for c in cols], dtype=np.uint8)
-            for d in range(self.depth, 0, -1):
-                ctx.canvas.blit(dark[idx], ix, iy + d, mask=disc & (yy >= -1))
+            size = 2 * n + 1
+            side = np.full((size + depth, size), -1)
+            front = disc & (yy >= -1)
+            for d in range(depth, 0, -1):
+                side[d : d + size][front] = idx[front]
+            wall = side >= 0
+            wall[:size] &= ~disc
+            ctx.canvas.blit(dark[np.maximum(side, 0)], ix, iy, mask=wall)
             if edge is not None:
-                ring = disc & ~_shift_down(disc, self.depth)
-                ctx.canvas.fill_mask(ring & (yy >= 0), ix, iy + self.depth, edge)
+                left = np.roll(side, 1, axis=1)
+                seams = wall & (side != left) & (left >= 0)
+                below = np.zeros_like(wall)
+                below[:-1] = wall[1:]
+                outline = wall & (~below | ~np.roll(wall, 1, axis=1) | ~np.roll(wall, -1, axis=1))
+                ctx.canvas.fill_mask(seams | outline, ix, iy, edge)
         ctx.canvas.blit(cols[idx], ix, iy, mask=disc)
         if edge is not None:
             # wedge boundaries and rim
             boundary = disc & ((idx != np.roll(idx, 1, axis=1)) | (idx != np.roll(idx, 1, axis=0)))
             if np.count_nonzero(self.fracs) > 1:
                 ctx.canvas.fill_mask(boundary & disc, ix, iy, edge)
-            ctx.canvas.circle(cx, cy, r, edge)
+            rim = disc & ~(np.roll(disc, 1, 0) & np.roll(disc, -1, 0) & np.roll(disc, 1, 1)
+                           & np.roll(disc, -1, 1))
+            ctx.canvas.fill_mask(rim, ix, iy, edge)
         # labels
         start = 0.0
         for i, f in enumerate(self.fracs):
@@ -1002,11 +1024,13 @@ class Pie(Artist):
             if f == 0:
                 continue
             ang = math.radians(self.startangle + (mid if self.counterclock else -mid))
-            ca, sa = math.cos(ang), -math.sin(ang)
+            ca, sn = math.cos(ang), -math.sin(ang)
+            sa = sn * tilt
             if self.labels:
-                lx, ly = cx + (r + 3) * ca, cy + (r + 3) * sa + (self.depth if sa > 0 else 0)
+                lx = cx + r * ca + 3 * ca
+                ly = cy + r * sa + 3 * sn + (depth if sn > 0 else 0)
                 ha = "left" if ca > 0.15 else ("right" if ca < -0.15 else "center")
-                va = "center" if abs(sa) < 0.5 else ("bottom" if sa < 0 else "top")
+                va = "center" if abs(sn) < 0.5 else ("bottom" if sn < 0 else "top")
                 ctx.canvas.text(round(lx), round(ly), st.text(self.labels[i]), font,
                                 self.label_color or st.fg, ha=ha, va=va,
                                 shadow=st.color(st.text_shadow) if st.text_shadow else None)
@@ -1020,12 +1044,6 @@ class Pie(Artist):
                         (255, 255, 255))
                     ctx.canvas.text(round(cx + 0.6 * r * ca), round(cy + 0.6 * r * sa), s, font,
                                     txt, ha="center", va="center")
-
-
-def _shift_down(m, d):
-    out = np.zeros_like(m)
-    out[d:] = m[:-d]
-    return out
 
 
 def _bright(rgb) -> bool:

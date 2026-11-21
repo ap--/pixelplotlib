@@ -17,13 +17,19 @@ def nice_ticks(lo: float, hi: float, max_ticks: int = 6) -> tuple[np.ndarray, fl
     if span == 0:
         span = abs(lo) or 1.0
     max_ticks = max(int(max_ticks), 2)
-    raw = span / (max_ticks - 1)
-    mag = 10.0 ** math.floor(math.log10(raw))
-    step = 10 * mag
-    for m in (1.0, 2.0, 2.5, 5.0, 10.0):
-        if span / (m * mag) <= max_ticks - 1 + 1e-9:
-            step = m * mag
-            break
+    # smallest nice step whose ticks *inside* [lo, hi] number at most max_ticks
+    k = math.floor(math.log10(span / max_ticks)) - 1
+    step = 10.0 ** (k + 3)
+    for mag in 10.0 ** np.arange(k, k + 3):
+        for m in (1.0, 2.0, 2.5, 5.0):
+            cand = m * mag
+            count = math.floor(hi / cand + 1e-9) - math.ceil(lo / cand - 1e-9) + 1
+            if count <= max_ticks:
+                step = cand
+                break
+        else:
+            continue
+        break
     eps = step * 1e-9
     start = math.ceil((lo - eps) / step) * step
     ticks = np.arange(start, hi + eps, step)
@@ -59,14 +65,13 @@ def format_ticks(values, log: bool = False) -> list[str]:
     if values.size == 0:
         return []
     if log:
-        out = []
-        for v in values:
-            e = math.log10(v) if v > 0 else 0
-            if abs(e - round(e)) < 1e-9 and (e < -3 or e > 4):
-                out.append(f"1E{int(round(e))}")
-            else:
-                out.append(format_ticks([v])[0])
-        return out
+        pos = values[values > 0]
+        exps = np.log10(pos)
+        decades = np.allclose(exps, np.round(exps), atol=1e-9)
+        if decades and pos.size and (exps.min() < -3 or exps.max() > 4):
+            # use E-notation for every label so the axis reads consistently
+            return [f"1E{int(round(math.log10(v)))}" if v > 0 else "0" for v in values]
+        return [format_ticks([v])[0] for v in values]
     big = np.nanmax(np.abs(values))
     nonzero = np.abs(values[values != 0])
     small = nonzero.min() if nonzero.size else 0.0

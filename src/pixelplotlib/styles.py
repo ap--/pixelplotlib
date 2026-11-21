@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
@@ -14,7 +14,7 @@ from .colormaps import CmapLike, Ramp, build_ramp
 from .colors import ColorLike, ColorSystem, shade
 from .fonts import BitmapFont, get_font
 
-Fill = Union[ColorLike, tuple[ColorLike, ColorLike], None]
+Fill = ColorLike | tuple[ColorLike, ColorLike] | None
 
 
 @dataclass(frozen=True)
@@ -59,6 +59,7 @@ class Style:
 
     line_width: int = 1
     line_shadow: ColorLike | None = None
+    line_halo: ColorLike | None = None
     marker_outline: ColorLike | None = None
     bar_shading: bool = False
     bar_outline: str | None = "auto"
@@ -197,6 +198,7 @@ GAMEBOY_STYLE = Style(
     linestyles=("-", "-", "--", "--", ":", ":"),
     markers=("o", "s", "^", "x", "D", "+"),
     fill_alphas=(1.0, 0.5, 0.75, 0.25),
+    line_halo="bg",
     frame_color="#0F380F",
     grid_color="#8BAC0F",
     grid_linestyle=":",
@@ -274,6 +276,8 @@ ONEBIT_STYLE = Style(
     linestyles=("-", "--", ":", "-."),
     markers=("o", "s", "^", "x", "D", "+"),
     fill_alphas=(0.5, 0.25, 0.75, 1.0),
+    line_halo="bg",
+    marker_outline="bg",
     panel=True,
     panel_fill="#FFFFFF",
     panel_border=("#000000",),

@@ -1,19 +1,43 @@
 [project]
 name = "pixelplotlib"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Scientific plotting with 8-bit and 16-bit pixel-art graphics"
 readme = "README.md"
-requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Andreas Poehlmann", email = "andreas@poehlmann.io" },
+]
+maintainers = [
+    { name = "Andreas Poehlmann", email = "andreas@poehlmann.io" },
+]
+requires-python = ">=3.11"
 dependencies = [
-    "numpy>=1.22",
-    "pillow>=9.1",
+    "numpy>=1.23.2",
+    "pillow>=9.2",
 ]
 keywords = ["plotting", "visualization", "pixel-art", "8-bit", "16-bit", "retro"]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Multimedia :: Graphics",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ap--/pixelplotlib"
+Source = "https://github.com/ap--/pixelplotlib"
+Issues = "https://github.com/ap--/pixelplotlib/issues"
+Changelog = "https://github.com/ap--/pixelplotlib/releases"
 
 [project.optional-dependencies]
 rich = [
@@ -32,15 +56,22 @@ dev = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.13.7,<0.14.0"]
-build-backend = "uv_build"
+requires = ["hatchling>=1.27", "hatch-vcs>=0.5"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.uv]
+# Rebuild the project when the git commit or tags change, so the VCS version stays current.
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]

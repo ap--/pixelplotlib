@@ -27,15 +27,16 @@ It depends only on [NumPy](https://numpy.org) and [Pillow](https://python-pillow
 
 ## Installation
 
-pixelplotlib is managed with [uv](https://docs.astral.sh/uv/). Add it to your project
-straight from GitHub:
+pixelplotlib is available on [PyPI](https://pypi.org/project/pixelplotlib/). Add it to your
+project with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv add git+https://github.com/ap--/pixelplotlib
+uv add pixelplotlib
 ```
 
-or install it into the current environment with `uv pip install git+https://github.com/ap--/pixelplotlib`.
-Python 3.10 or newer is required.
+or install it into the current environment with `uv pip install pixelplotlib` (or `pip install pixelplotlib`).
+To try the latest development version use `uv add git+https://github.com/ap--/pixelplotlib`.
+Python 3.11 or newer is required.
 
 ## Quick start
 
@@ -89,7 +90,7 @@ sixel output (e.g. on Windows or through ssh/multiplexers that hide the reply) o
 Figures also work in [Rich](https://github.com/Textualize/rich) and
 [Textual](https://github.com/Textualize/textual), so they render in any terminal with
 colour support (no sixel support needed). Each character cell shows two pixels as a
-half block. Install the extras with `uv add "pixelplotlib[rich,textual] @ git+https://github.com/ap--/pixelplotlib"`.
+half block. Install the extras with `uv add "pixelplotlib[rich,textual]"`.
 
 A `Figure` is a Rich renderable. Wrap it in `pixelplotlib.rich.Plot` to choose its size
 in cells (`width=`, `height=`, or `expand=True` to fill the space):

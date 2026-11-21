@@ -16,15 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-depth: 0  # hatch-vcs derives the version from git tags
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.4.0
-      # uv_build has no dynamic (VCS) versions, so stamp the release tag into pyproject.toml.
-      - name: Set version from release tag
+      - name: Expected version from release tag
         id: version
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
-          VERSION=$(uv version --frozen --short "${TAG#v}")
+          VERSION=$(uv run --isolated --no-project --with packaging -- python -c \
+            'import sys; from packaging.version import Version; print(Version(sys.argv[1]))' "$TAG")
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
       # PyPI can't resolve relative links, so pin them to the release tag on GitHub.
       - name: Make README links absolute
@@ -35,6 +36,8 @@ jobs:
             -e "s#(\]\(|src=\")docs/#\1https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${TAG}/docs/#g" \
             -e "s#(\]\(|src=\")examples/#\1https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/examples/#g" \
             README.md
+          # A dirty tree would make hatch-vcs emit a .dev/+local version PyPI rejects.
+          git update-index --assume-unchanged README.md
       - run: uv build --no-sources
       - name: Check distributions
         env:
